@@ -60,6 +60,8 @@ private:
     juce::Synthesiser synth;
     std::shared_ptr<juce::AudioBuffer<float>> nextWaveform;
     std::unique_ptr<SocketServer> socketServer;
+    std::atomic<std::string> isSocketConnected = std::atomic<std::string>();
+
 
     std::atomic<bool> swapFlag { false };
     std::atomic<bool>*readyToSwap = &swapFlag;

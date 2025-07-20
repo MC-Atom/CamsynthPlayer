@@ -28,9 +28,7 @@ NewProjectAudioProcessor::NewProjectAudioProcessor()
     synth.addVoice(new SynthVoice());
 }
 
-NewProjectAudioProcessor::~NewProjectAudioProcessor()
-{
-}
+NewProjectAudioProcessor::~NewProjectAudioProcessor()= default;
 
 //==============================================================================
 const juce::String NewProjectAudioProcessor::getName() const
@@ -103,7 +101,7 @@ void NewProjectAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
     nextWaveform = std::make_shared<juce::AudioBuffer<float>>();
     nextWaveform->setSize(1,2048);
 
-    socketServer = std::make_unique<SocketServer>(readyToSwap, nextWaveform);
+    socketServer = std::make_unique<SocketServer>(readyToSwap, nextWaveform, isSocketConnected);
     synth.setCurrentPlaybackSampleRate(sampleRate);
 
     for (int i = 0; i < synth.getNumVoices(); i++) {
@@ -178,7 +176,8 @@ bool NewProjectAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* NewProjectAudioProcessor::createEditor()
 {
-    return new NewProjectAudioProcessorEditor (*this);
+    isSocketConnected.store("Waiting To Connect");
+    return new NewProjectAudioProcessorEditor (*this, isSocketConnected);
 }
 
 //==============================================================================

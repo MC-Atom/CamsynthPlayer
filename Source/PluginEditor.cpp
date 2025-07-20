@@ -10,9 +10,10 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-NewProjectAudioProcessorEditor::NewProjectAudioProcessorEditor (NewProjectAudioProcessor& p)
+NewProjectAudioProcessorEditor::NewProjectAudioProcessorEditor (NewProjectAudioProcessor& p, const std::atomic<std::string> &socketText)
     : AudioProcessorEditor (&p), audioProcessor (p)
 {
+    isSocketConnected = socketText;
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
     setSize (400, 300);
@@ -30,7 +31,10 @@ void NewProjectAudioProcessorEditor::paint (juce::Graphics& g)
 
     g.setColour (juce::Colours::white);
     g.setFont (juce::FontOptions (15.0f));
-    g.drawFittedText ("Hellllo World!", getLocalBounds(), juce::Justification::centred, 1);
+    g.drawFittedText (isSocketConnected, getLocalBounds(), juce::Justification::centred, 1);
+
+
+
 }
 
 void NewProjectAudioProcessorEditor::resized()
