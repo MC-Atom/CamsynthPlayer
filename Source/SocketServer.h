@@ -21,11 +21,11 @@ class SocketServer final : public juce::Thread {
 public:
   std::atomic<bool>*readyToSwap;
   std::shared_ptr<juce::AudioBuffer<float>> nextWaveform;
-  std::atomic<std::string>*isSocketConnected;
+  std::atomic<int>*isSocketConnected;
 
   SocketServer (std::atomic<bool>*readyToSwap_input,
     const std::shared_ptr<juce::AudioBuffer<float>> &nextWaveform_input,
-    std::atomic<std::string>*socketText)
+    std::atomic<int>*socketText)
   : Thread("Socket Server") {
 
     readyToSwap = readyToSwap_input;
@@ -41,6 +41,8 @@ public:
   }
 
   void run() override;
+
+  std::function<void()> onSocketStatusChange;
 
 private:
   static juce::AudioBuffer<float> processJson(char* body, int wavetableSize);

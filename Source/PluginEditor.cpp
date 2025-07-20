@@ -10,18 +10,19 @@
 #include "PluginEditor.h"
 
 //==============================================================================
-NewProjectAudioProcessorEditor::NewProjectAudioProcessorEditor (NewProjectAudioProcessor& p, const std::atomic<std::string> &socketText)
+NewProjectAudioProcessorEditor::NewProjectAudioProcessorEditor (NewProjectAudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p)
 {
-    isSocketConnected = socketText;
+    audioProcessor.socketServer->onSocketStatusChange = [this]() {
+        repaint();
+    };
+
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
     setSize (400, 300);
 }
 
-NewProjectAudioProcessorEditor::~NewProjectAudioProcessorEditor()
-{
-}
+NewProjectAudioProcessorEditor::~NewProjectAudioProcessorEditor() = default;
 
 //==============================================================================
 void NewProjectAudioProcessorEditor::paint (juce::Graphics& g)
@@ -31,7 +32,25 @@ void NewProjectAudioProcessorEditor::paint (juce::Graphics& g)
 
     g.setColour (juce::Colours::white);
     g.setFont (juce::FontOptions (15.0f));
-    g.drawFittedText (isSocketConnected, getLocalBounds(), juce::Justification::centred, 1);
+
+    std::string socketText;
+    switch (audioProcessor.isSocketConnected.load()) {
+        case 0:
+            socketText = "Waiting to Connect";
+            break;
+        case 1:
+            socketText = "Listening";
+            break;
+        case 2:
+            socketText = "Receiving";
+            break;
+        case -1:
+            socketText = "Failed to Connect";
+            break;
+        default:
+            socketText = "Unknown Error";
+    }
+    g.drawFittedText (socketText, getLocalBounds(), juce::Justification::centred, 1);
 
 
 

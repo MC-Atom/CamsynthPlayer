@@ -56,11 +56,13 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    std::atomic<int> isSocketConnected = std::atomic<int>();
+    std::unique_ptr<SocketServer> socketServer;
 private:
     juce::Synthesiser synth;
     std::shared_ptr<juce::AudioBuffer<float>> nextWaveform;
-    std::unique_ptr<SocketServer> socketServer;
-    std::atomic<std::string> isSocketConnected = std::atomic<std::string>();
+
+
 
 
     std::atomic<bool> swapFlag { false };

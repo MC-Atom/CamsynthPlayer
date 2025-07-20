@@ -17,7 +17,7 @@
 class NewProjectAudioProcessorEditor  : public juce::AudioProcessorEditor
 {
 public:
-    NewProjectAudioProcessorEditor (NewProjectAudioProcessor&, const std::atomic<std::string> &socketText);
+    NewProjectAudioProcessorEditor (NewProjectAudioProcessor&);
     ~NewProjectAudioProcessorEditor() override;
 
     //==============================================================================
@@ -28,7 +28,6 @@ private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     NewProjectAudioProcessor& audioProcessor;
-    std::atomic<std::string> isSocketConnected;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NewProjectAudioProcessorEditor)
 };

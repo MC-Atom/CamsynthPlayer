@@ -21,10 +21,17 @@ void SocketServer::run()
   auto generatedWaveform = juce::AudioBuffer<float>();
   bool listening = socket->createListener(portNumber, localHostName);
 
+  while (!onSocketStatusChange) { // Make sure onSocketStatusChange is defined before continuing
+    sleep(10);
+  }
+
   if (listening)
   {
     bool newWaveform = false;
     std::printf("Listening on %s:%d\n",localHostName,portNumber);
+    isSocketConnected->store(1);
+    if (onSocketStatusChange)
+      juce::MessageManager::callAsync(onSocketStatusChange);
 
     while (!threadShouldExit())
     {
@@ -37,6 +44,7 @@ void SocketServer::run()
         if (bytesRead > 0) {
           buffer[bytesRead] = '\0';
           std::printf("📥 Received:\n%s\n", buffer);
+          isSocketConnected->store(2);
 
           // === EXTRACT BODY ===
           // crude way to extract JSON body (assumes POST)
@@ -67,6 +75,9 @@ void SocketServer::run()
   else
   {
     std::printf("Failed to create listener!\n");
+    isSocketConnected->store(-1);
+    if (onSocketStatusChange)
+      juce::MessageManager::callAsync(onSocketStatusChange);
   }
 }
 
