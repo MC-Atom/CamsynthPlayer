@@ -33,23 +33,18 @@ void NewProjectAudioProcessorEditor::paint (juce::Graphics& g)
     g.setColour (juce::Colours::white);
     g.setFont (juce::FontOptions (15.0f));
 
+    int a = audioProcessor.isSocketConnected.load();
+
     std::string socketText;
-    switch (audioProcessor.isSocketConnected.load()) {
-        case 0:
-            socketText = "Waiting to Connect";
-            break;
-        case 1:
-            socketText = "Listening";
-            break;
-        case 2:
-            socketText = "Receiving";
-            break;
-        case -1:
-            socketText = "Failed to Connect";
-            break;
-        default:
-            socketText = "Unknown Error";
-    }
+    int port = -1;
+    if (a == 0) {socketText = "Waiting to Connect";}
+    else if (a >= 8080) {
+        port = a;
+        socketText = "Listening on port " + std::to_string(port);
+    } else if (a == 2) {socketText = "Receiving on port " + std::to_string(port);}
+    else if (a == -1){ socketText = "Failed to Connect";}
+    else { socketText = "Unknown Error " + std::to_string(a);}
+
     g.drawFittedText (socketText, getLocalBounds(), juce::Justification::centred, 1);
 
 

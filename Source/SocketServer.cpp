@@ -12,26 +12,34 @@
 
 #include "SocketServer.h"
 
-#define portNumber 8080
+#include <fstream>
+
+#define InitPortNumber 8080
 #define localHostName "0.0.0.0"
 
 void SocketServer::run()
 {
-  const auto socket = std::make_unique<juce::StreamingSocket>();
-  auto generatedWaveform = juce::AudioBuffer<float>();
-  bool listening = socket->createListener(portNumber, localHostName);
-
   while (!onSocketStatusChange) { // Make sure onSocketStatusChange is defined before continuing
     sleep(10);
   }
+
+  const auto socket = std::make_unique<juce::StreamingSocket>();
+  auto generatedWaveform = juce::AudioBuffer<float>();
+  int portNumber = InitPortNumber;
+  bool listening = socket->createListener(portNumber, localHostName);
+  while (!listening) {
+    portNumber += 1;
+    listening = socket->createListener(portNumber, localHostName);
+  }
+
+
 
   if (listening)
   {
     bool newWaveform = false;
     std::printf("Listening on %s:%d\n",localHostName,portNumber);
-    isSocketConnected->store(1);
-    if (onSocketStatusChange)
-      juce::MessageManager::callAsync(onSocketStatusChange);
+    isSocketConnected->store(portNumber);
+    juce::MessageManager::callAsync(onSocketStatusChange);
 
     while (!threadShouldExit())
     {
@@ -45,6 +53,7 @@ void SocketServer::run()
           buffer[bytesRead] = '\0';
           std::printf("📥 Received:\n%s\n", buffer);
           isSocketConnected->store(2);
+          juce::MessageManager::callAsync(onSocketStatusChange);
 
           // === EXTRACT BODY ===
           // crude way to extract JSON body (assumes POST)
@@ -76,14 +85,14 @@ void SocketServer::run()
   {
     std::printf("Failed to create listener!\n");
     isSocketConnected->store(-1);
-    if (onSocketStatusChange)
-      juce::MessageManager::callAsync(onSocketStatusChange);
+    juce::MessageManager::callAsync(onSocketStatusChange);
   }
 }
 
 juce::AudioBuffer<float> SocketServer::processJson(char* body, int wavetableSize) {
   juce::AudioBuffer<float> wavetable = juce::AudioBuffer<float>();
   wavetable.setSize(1,wavetableSize);
+  wavetable.clear();
 
   if (body != nullptr)
   {
@@ -102,7 +111,10 @@ juce::AudioBuffer<float> SocketServer::processJson(char* body, int wavetableSize
         float phase = harmonic.getProperty("Phase",juce::var());
 
         if (freq > 0) {
+          std::printf("freq: %d, amp: %f, phase: %f\n", freq, amp, phase);
+
           float* writePtr = wavetable.getWritePointer(0);
+
           for (int i = 0; i < wavetableSize; ++i)
           {
             float t = static_cast<float>(i) / static_cast<float>(wavetableSize); // [0, 1)
@@ -111,16 +123,22 @@ juce::AudioBuffer<float> SocketServer::processJson(char* body, int wavetableSize
           }
         }
       }
+
+      std::string outstr = "";
       // Normalize data from -1 to 1
       float* data = wavetable.getWritePointer(0);
       float maxAmp = 0.0f;
       for (int i = 0; i < wavetable.getNumSamples(); ++i)
         maxAmp = std::max(maxAmp, std::abs(data[i]));
-
-      if (maxAmp > 0.0f)
+      if (maxAmp > 0.0f || true)
       {
-        for (int i = 0; i < wavetable.getNumSamples(); ++i)
+        for (int i = 0; i < wavetable.getNumSamples(); ++i) {
           data[i] /= maxAmp;
+          outstr.append(std::to_string(i) + "," + std::to_string(data[i]) + "\n");
+        }
+        std::ofstream out("/Users/atom/Downloads/yewkjab.csv");
+        out << outstr;
+        out.close();
       }
     }
   }
