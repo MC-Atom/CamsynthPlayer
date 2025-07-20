@@ -9,9 +9,9 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include <opencv2/opencv.hpp>
 #include <fstream>
-#include "VideoProcessor.h"
+
+#include "SocketServer.h"
 
 //==============================================================================
 /**
@@ -58,8 +58,8 @@ public:
 
 private:
     juce::Synthesiser synth;
-    VideoProcessor video_processor;
     std::shared_ptr<juce::AudioBuffer<float>> nextWaveform;
+    std::unique_ptr<SocketServer> socketServer;
 
     std::atomic<bool> swapFlag { false };
     std::atomic<bool>*readyToSwap = &swapFlag;

@@ -99,9 +99,11 @@ void NewProjectAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need.
+    
+    nextWaveform = std::make_shared<juce::AudioBuffer<float>>();
+    nextWaveform->setSize(1,2048);
 
-    video_processor.prepareToPlay(nextWaveform,readyToSwap);
-    video_processor.startThread();
+    socketServer = std::make_unique<SocketServer>(readyToSwap, nextWaveform);
     synth.setCurrentPlaybackSampleRate(sampleRate);
 
     for (int i = 0; i < synth.getNumVoices(); i++) {

@@ -4,12 +4,6 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn">
   <MAINGROUP id="jaWqtv" name="NewProject">
     <GROUP id="{3B3E93A8-9E17-CA31-A11A-A9A384AB8655}" name="Source">
-      <FILE id="p69rvX" name="VideoProcessor.cpp" compile="1" resource="0"
-            file="Source/VideoProcessor.cpp"/>
-      <FILE id="dCDMcu" name="VideoProcessor.h" compile="0" resource="0"
-            file="Source/VideoProcessor.h"/>
-      <FILE id="hT54at" name="dft.cpp" compile="1" resource="0" file="Source/dft.cpp"/>
-      <FILE id="o2x6k5" name="dft.h" compile="0" resource="0" file="Source/dft.h"/>
       <FILE id="JdGp4C" name="SynthSound.cpp" compile="1" resource="0" file="Source/SynthSound.cpp"/>
       <FILE id="BJZbDv" name="SynthSound.h" compile="0" resource="0" file="Source/SynthSound.h"/>
       <FILE id="Hhm2yo" name="SynthVoice.cpp" compile="1" resource="0" file="Source/SynthVoice.cpp"/>
@@ -21,6 +15,9 @@
       <FILE id="dkqH7m" name="PluginEditor.cpp" compile="1" resource="0"
             file="Source/PluginEditor.cpp"/>
       <FILE id="C7qx03" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
+      <FILE id="GKaQPr" name="SocketServer.cpp" compile="1" resource="0"
+            file="Source/SocketServer.cpp"/>
+      <FILE id="kxAvFn" name="SocketServer.h" compile="0" resource="0" file="Source/SocketServer.h"/>
     </GROUP>
   </MAINGROUP>
   <MODULES>

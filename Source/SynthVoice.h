@@ -12,7 +12,6 @@
 
 #include <JuceHeader.h>
 #include <juce_dsp/juce_dsp.h>
-#include <opencv2/opencv.hpp>
 #include "SynthSound.h"
 
 class SynthVoice : public juce::SynthesiserVoice {
@@ -26,7 +25,7 @@ public:
   void renderNextBlock (juce::AudioBuffer< float > &outputBuffer, int startSample, int numSamples) override;
 private:
   const float ALPHA = 0.4;
-  std::shared_ptr<juce::AudioBuffer<float>> currentWaveform;
+  juce::AudioBuffer<float> currentWaveform;
   std::shared_ptr<juce::AudioBuffer<float>> nextWaveform;
   std::atomic<bool>*readyToSwap = nullptr;
 
