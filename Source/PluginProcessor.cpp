@@ -24,8 +24,11 @@ NewProjectAudioProcessor::NewProjectAudioProcessor()
                        )
 #endif
 {
+    for (int i = 0; i < NUM_VOICES; ++i) {
+        synth.addVoice(new SynthVoice());
+    }
+
     synth.addSound(new SynthSound());
-    synth.addVoice(new SynthVoice());
 }
 
 NewProjectAudioProcessor::~NewProjectAudioProcessor()= default;
@@ -99,14 +102,16 @@ void NewProjectAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
     // initialisation that you need.
     
     nextWaveform = std::make_shared<juce::AudioBuffer<float>>();
-    nextWaveform->setSize(1,2048);
+    nextWaveform->setSize(2,2048);
 
-    socketServer = std::make_unique<SocketServer>(readyToSwap, nextWaveform, &isSocketConnected);
+    socketServer = std::make_unique<SocketServer>(readyToSwap, &synthMode, &bias, nextWaveform, &httpState);
     synth.setCurrentPlaybackSampleRate(sampleRate);
+
+    midiCollector.reset(sampleRate);
 
     for (int i = 0; i < synth.getNumVoices(); i++) {
         if (auto voice = dynamic_cast<SynthVoice*> (synth.getVoice(i))) {
-            voice->prepareToPlay(sampleRate, samplesPerBlock, getTotalNumOutputChannels(), nextWaveform, readyToSwap);
+            voice->prepareToPlay(sampleRate, samplesPerBlock, getTotalNumOutputChannels(), adsrParams, nextWaveform, readyToSwap);
         }
     }
 }
@@ -145,7 +150,6 @@ bool NewProjectAudioProcessor::isBusesLayoutSupported (const BusesLayout& layout
 
 void NewProjectAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
-    juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
@@ -158,13 +162,16 @@ void NewProjectAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, j
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
+    juce::MidiBuffer incomingMidi;
+    midiCollector.removeNextBlockOfMessages (incomingMidi, buffer.getNumSamples()); // [11]
+
+
     for (int i = 0; i < synth.getNumVoices(); ++i) {
         if (auto voice = dynamic_cast<juce::SynthesiserVoice*> (synth.getVoice(i))) {
 
             // ASDR and stuff
         }
     }
-
     synth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
 }
 
@@ -176,7 +183,6 @@ bool NewProjectAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* NewProjectAudioProcessor::createEditor()
 {
-    isSocketConnected.store(0);
     return new NewProjectAudioProcessorEditor (*this);
 }
 

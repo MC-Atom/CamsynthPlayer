@@ -40,6 +40,8 @@ public:
     //==============================================================================
     const juce::String getName() const override;
 
+    const int NUM_VOICES = 8;
+
     bool acceptsMidi() const override;
     bool producesMidi() const override;
     bool isMidiEffect() const override;
@@ -56,13 +58,17 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
-    std::atomic<int> isSocketConnected = std::atomic<int>();
     std::unique_ptr<SocketServer> socketServer;
+    juce::Label httpState;
+    juce::ADSR::Parameters adsrParams;
+    juce::MidiMessageCollector midiCollector;
+    std::atomic<float> bias { 0 };
+    std::atomic<int> synthMode { 0 };
+
+
 private:
     juce::Synthesiser synth;
     std::shared_ptr<juce::AudioBuffer<float>> nextWaveform;
-
-
 
 
     std::atomic<bool> swapFlag { false };

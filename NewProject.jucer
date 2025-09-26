@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<JUCERPROJECT id="zH2V5a" name="NewProject" projectType="audioplug" useAppConfig="0"
-              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn">
-  <MAINGROUP id="jaWqtv" name="NewProject">
+<JUCERPROJECT id="zH2V5a" name="CamsynthPlayer" projectType="audioplug" useAppConfig="0"
+              addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn"
+              companyName="Atom's Synth Smithing" companyWebsite="https://devynoh.dev/"
+              companyEmail="devyn@devynoh.dev">
+  <MAINGROUP id="jaWqtv" name="CamsynthPlayer">
     <GROUP id="{3B3E93A8-9E17-CA31-A11A-A9A384AB8655}" name="Source">
       <FILE id="JdGp4C" name="SynthSound.cpp" compile="1" resource="0" file="Source/SynthSound.cpp"/>
       <FILE id="BJZbDv" name="SynthSound.h" compile="0" resource="0" file="Source/SynthSound.h"/>

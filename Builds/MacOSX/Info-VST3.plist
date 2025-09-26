@@ -8,11 +8,11 @@
     <key>CFBundleIconFile</key>
     <string></string>
     <key>CFBundleIdentifier</key>
-    <string>com.yourcompany.NewProject</string>
+    <string>com.AtomsSynthSmithing.CamsynthPlayer</string>
     <key>CFBundleName</key>
-    <string>NewProject</string>
+    <string>CamsynthPlayer</string>
     <key>CFBundleDisplayName</key>
-    <string>NewProject</string>
+    <string>CamsynthPlayer</string>
     <key>CFBundlePackageType</key>
     <string>BNDL</string>
     <key>CFBundleSignature</key>

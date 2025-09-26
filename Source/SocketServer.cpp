@@ -13,6 +13,7 @@
 #include "SocketServer.h"
 
 #include <fstream>
+#include <valarray>
 
 #define InitPortNumber 8080
 #define localHostName "0.0.0.0"
@@ -38,8 +39,10 @@ void SocketServer::run()
   {
     bool newWaveform = false;
     std::printf("Listening on %s:%d\n",localHostName,portNumber);
-    isSocketConnected->store(portNumber);
-    juce::MessageManager::callAsync(onSocketStatusChange);
+    if (true) {
+      juce::MessageManagerLock mml (Thread::getCurrentThread());
+      httpState->setText("Listening on port " + std::to_string(portNumber), juce::sendNotification);
+    }
 
     while (!threadShouldExit())
     {
@@ -48,23 +51,43 @@ void SocketServer::run()
       if (connection != nullptr) {
         char buffer[MAX_URL_SIZE] = {0};
 
-        int bytesRead = connection->read(buffer, MAX_URL_SIZE - 1, true); // true = block
+        int bytesRead = connection->read(buffer, MAX_URL_SIZE - 1, false);
         if (bytesRead > 0) {
           buffer[bytesRead] = '\0';
-          std::printf("📥 Received:\n%s\n", buffer);
-          isSocketConnected->store(2);
-          juce::MessageManager::callAsync(onSocketStatusChange);
+          //std::printf("Received:\n%s\n", buffer);
+
+          if (true) {
+            juce::MessageManagerLock mml (Thread::getCurrentThread());
+            httpState->setText("Recieving on port " + std::to_string(portNumber), juce::sendNotification);
+          }
 
           // === EXTRACT BODY ===
           // crude way to extract JSON body (assumes POST)
           char* body = strstr(buffer, "\r\n\r\n");
 
           // Process the json into the wavetable we want
-          generatedWaveform = processJson(body,nextWaveform->getNumSamples());
+          switch (synthMode->load()) {
+            case 1: // If in mode 0, drop negative harmonic values
+              generatedWaveform = processJsonDropNeg(body,nextWaveform->getNumChannels(), nextWaveform->getNumSamples(), bias->load());
+              break;
+            case 2: // If in mode 1, combine the pos and neg values into mono
+              generatedWaveform = processJsonCombineNeg(body,nextWaveform->getNumChannels(), nextWaveform->getNumSamples(), bias->load());
+              break;
+            case 3: //If in mode 2, map neg values to the right channel, pos to the left
+              generatedWaveform = processJsonStereo(body,nextWaveform->getNumChannels(), nextWaveform->getNumSamples(), bias->load());
+              std::cout << "hi" << std::endl;
+              break;
+            default: // Go to case 0 by default
+              generatedWaveform = processJsonDropNeg(body,nextWaveform->getNumChannels(), nextWaveform->getNumSamples(), bias->load());
+          }
+
           newWaveform = true;
 
           // Send minimal HTTP 200 OK back to client
-          const char* response = "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n";
+          const char* response =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Length: 0\r\n"
+            "Connection: close\r\n\r\n";
           connection->write(response, static_cast<int>(strlen(response)));
         }
       connection->close();
@@ -83,22 +106,21 @@ void SocketServer::run()
   }
   else
   {
-    std::printf("Failed to create listener!\n");
-    isSocketConnected->store(-1);
-    juce::MessageManager::callAsync(onSocketStatusChange);
+    juce::MessageManagerLock mml (Thread::getCurrentThread());
+    httpState->setText("Failed to create listener!", juce::sendNotification);
   }
 }
 
-juce::AudioBuffer<float> SocketServer::processJson(char* body, int wavetableSize) {
+juce::AudioBuffer<float> SocketServer::processJsonDropNeg(const char* body, const int wavetableNumChannels, const int wavetableSize, const float bias) {
   juce::AudioBuffer<float> wavetable = juce::AudioBuffer<float>();
-  wavetable.setSize(1,wavetableSize);
+  wavetable.setSize(wavetableNumChannels,wavetableSize);
   wavetable.clear();
 
   if (body != nullptr)
   {
     body += 4; // skip past the "\r\n\r\n"
     juce::String bodyStr(body);
-    std::printf("Body:\n%s\n", bodyStr.toRawUTF8());
+    //std::printf("Body:\n%s\n", bodyStr.toRawUTF8());
 
     // parse JSON
     juce::var parsed = juce::JSON::parse(bodyStr);
@@ -111,7 +133,11 @@ juce::AudioBuffer<float> SocketServer::processJson(char* body, int wavetableSize
         float phase = harmonic.getProperty("Phase",juce::var());
 
         if (freq > 0) {
-          std::printf("freq: %d, amp: %f, phase: %f\n", freq, amp, phase);
+          //printf("%a\n",bias);
+          amp *= std::pow(1 + (bias * 0.05f),freq-50);
+          if (bias == -1) {
+            amp = 0;
+          }
 
           float* writePtr = wavetable.getWritePointer(0);
 
@@ -127,6 +153,7 @@ juce::AudioBuffer<float> SocketServer::processJson(char* body, int wavetableSize
       std::string outstr = "";
       // Normalize data from -1 to 1
       float* data = wavetable.getWritePointer(0);
+      float* channel2 = wavetable.getWritePointer(1);
       float maxAmp = 0.0f;
       for (int i = 0; i < wavetable.getNumSamples(); ++i)
         maxAmp = std::max(maxAmp, std::abs(data[i]));
@@ -134,11 +161,140 @@ juce::AudioBuffer<float> SocketServer::processJson(char* body, int wavetableSize
       {
         for (int i = 0; i < wavetable.getNumSamples(); ++i) {
           data[i] /= maxAmp;
+          channel2[i] = data[i];
           outstr.append(std::to_string(i) + "," + std::to_string(data[i]) + "\n");
         }
-        std::ofstream out("/Users/atom/Downloads/yewkjab.csv");
-        out << outstr;
-        out.close();
+      }
+    }
+  }
+
+  return wavetable;
+}
+
+
+juce::AudioBuffer<float> SocketServer::processJsonCombineNeg(const char* body, const int wavetableNumChannels, const int wavetableSize, const float bias) {
+  juce::AudioBuffer<float> wavetable = juce::AudioBuffer<float>();
+  wavetable.setSize(wavetableNumChannels,wavetableSize);
+  wavetable.clear();
+
+  if (body != nullptr)
+  {
+    body += 4; // skip past the "\r\n\r\n"
+    juce::String bodyStr(body);
+    //std::printf("Body:\n%s\n", bodyStr.toRawUTF8());
+
+    // parse JSON
+    juce::var parsed = juce::JSON::parse(bodyStr);
+    if (parsed.isObject())
+    {
+      juce::Array<juce::var> * harmonicsArray = parsed.getProperty ("harmonicSeries",juce::var()).getArray();
+      for (auto& harmonic : *harmonicsArray) {
+        float amp = harmonic.getProperty("Amp",juce::var());
+        int freq = harmonic.getProperty("Freq",juce::var());
+        float phase = harmonic.getProperty("Phase",juce::var());
+
+        if (freq < 0) freq = -freq;
+
+        //printf("%a\n",bias);
+        amp *= std::pow(1 + (bias * 0.05f),freq-50);
+        if (bias == -1) {
+          amp = 0;
+        }
+
+        float* writePtr = wavetable.getWritePointer(0);
+
+        for (int i = 0; i < wavetableSize; ++i)
+        {
+          float t = static_cast<float>(i) / static_cast<float>(wavetableSize); // [0, 1)
+          float value = amp * std::sin(2.0f * juce::MathConstants<float>::pi * freq * t + phase);
+          writePtr[i] += value;
+        }
+
+      }
+
+      std::string outstr = "";
+      // Normalize data from -1 to 1
+      float* data = wavetable.getWritePointer(0);
+      float* channel2 = wavetable.getWritePointer(1);
+      float maxAmp = 0.0f;
+      for (int i = 0; i < wavetable.getNumSamples(); ++i)
+        maxAmp = std::max(maxAmp, std::abs(data[i]));
+      if (maxAmp > 0.0f || true) {
+        for (int i = 0; i < wavetable.getNumSamples(); ++i) {
+          data[i] /= maxAmp;
+          channel2[i] = data[i];
+          outstr.append(std::to_string(i) + "," + std::to_string(data[i]) + "\n");
+        }
+      }
+
+    }
+  }
+
+  return wavetable;
+}
+
+
+juce::AudioBuffer<float> SocketServer::processJsonStereo(const char* body, const int wavetableNumChannels, const int wavetableSize, const float bias) {
+  juce::AudioBuffer<float> wavetable = juce::AudioBuffer<float>();
+  wavetable.setSize(wavetableNumChannels,wavetableSize);
+  wavetable.clear();
+
+  if (body != nullptr)
+  {
+    body += 4; // skip past the "\r\n\r\n"
+    juce::String bodyStr(body);
+    //std::printf("Body:\n%s\n", bodyStr.toRawUTF8());
+
+    // parse JSON
+    juce::var parsed = juce::JSON::parse(bodyStr);
+    if (parsed.isObject())
+    {
+      juce::Array<juce::var> * harmonicsArray = parsed.getProperty ("harmonicSeries",juce::var()).getArray();
+      for (auto& harmonic : *harmonicsArray) {
+        float amp = harmonic.getProperty("Amp",juce::var());
+        int freq = harmonic.getProperty("Freq",juce::var());
+        float phase = harmonic.getProperty("Phase",juce::var());
+
+        int channel;
+
+        if (freq > 0) {
+          channel = 0;
+        } else {
+          channel = 1;
+          freq = -freq;
+        }
+
+        //printf("%a\n",bias);
+        amp *= std::pow(1 + (bias * 0.05f),freq-50);
+        if (bias == -1) {
+          amp = 0;
+        }
+
+        float* writePtr = wavetable.getWritePointer(channel);
+
+        for (int i = 0; i < wavetableSize; ++i)
+        {
+          float t = static_cast<float>(i) / static_cast<float>(wavetableSize); // [0, 1)
+          float value = amp * std::sin(2.0f * juce::MathConstants<float>::pi * freq * t + phase);
+          writePtr[i] += value;
+        }
+
+      }
+
+      std::string outstr = "";
+      // Normalize data from -1 to 1
+      for (int channel = 0; channel < wavetable.getNumChannels(); ++channel) {
+        float* data = wavetable.getWritePointer(channel);
+        float maxAmp = 0.0f;
+        for (int i = 0; i < wavetable.getNumSamples(); ++i)
+          maxAmp = std::max(maxAmp, std::abs(data[i]));
+        if (maxAmp > 0.0f || true)
+        {
+          for (int i = 0; i < wavetable.getNumSamples(); ++i) {
+            data[i] /= maxAmp;
+            outstr.append(std::to_string(i) + "," + std::to_string(data[i]) + "\n");
+          }
+        }
       }
     }
   }

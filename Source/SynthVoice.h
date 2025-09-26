@@ -21,16 +21,21 @@ public:
   void stopNote (float velocity, bool allowTailOff) override;
   void pitchWheelMoved (int newPitchWheelValue) override;
   void controllerMoved (int controllerNumber, int newControllerValue) override;
-  void prepareToPlay (double sampleRate, int samplesPerBlock, int outputChannels, const std::shared_ptr<juce::AudioBuffer<float>> &nextWaveform,  std::atomic<bool>* readyToSwap);
+  void prepareToPlay (double sampleRate, int samplesPerBlock, int outputChannels, juce::ADSR::Parameters adsrParams, const std::shared_ptr<juce::AudioBuffer<float>> &nextWaveform,  std::atomic<bool>* readyToSwap);
   void renderNextBlock (juce::AudioBuffer< float > &outputBuffer, int startSample, int numSamples) override;
-private:
-  const float ALPHA = 0.4;
-  juce::AudioBuffer<float> currentWaveform;
-  std::shared_ptr<juce::AudioBuffer<float>> nextWaveform;
-  std::atomic<bool>*readyToSwap = nullptr;
 
   juce::ADSR adsr;
   juce::ADSR::Parameters adsrParams;
+
+private:
+  const float ALPHA = 0.4;
+  juce::AudioBuffer<float> renderBuffer;
+  juce::AudioBuffer<float> currentWaveform;
+  std::shared_ptr<juce::AudioBuffer<float>> nextWaveform;
+  std::atomic<bool>*readyToSwap = nullptr;
+  double tailOff = 0.0;
+
+
 
   juce::dsp::Oscillator<float> osc;
   juce::dsp::Gain<float> gain;
