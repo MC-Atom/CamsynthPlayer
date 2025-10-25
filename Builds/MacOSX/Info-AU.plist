@@ -35,11 +35,11 @@
         <key>factoryFunction</key>
         <string>CamsynthPlayerAUFactory</string>
         <key>manufacturer</key>
-        <string>Manu</string>
+        <string>ATSS</string>
         <key>type</key>
         <string>aumu</string>
         <key>subtype</key>
-        <string>Zh2v</string>
+        <string>At0m</string>
         <key>version</key>
         <integer>65536</integer>
         <key>resourceUsage</key>

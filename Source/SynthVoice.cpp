@@ -11,6 +11,8 @@
 #include "SynthVoice.h"
 #include <utility>
 
+std::shared_ptr<juce::AudioBuffer<float>> SynthVoice::currentWaveform = std::make_shared<juce::AudioBuffer<float>>();
+
 bool SynthVoice::canPlaySound (juce::SynthesiserSound * sound) {
   return dynamic_cast<juce::SynthesiserSound*>(sound) != nullptr;
 }
@@ -76,15 +78,16 @@ void SynthVoice::prepareToPlay(double sampleRate, int samplesPerBlock, int outpu
   gain.prepare(spec);
   gain.setGainDecibels(-6);
 
-  currentWaveform = juce::AudioBuffer<float>();
+  //currentWaveform = std::make_shared<juce::AudioBuffer<float>>();
+
   int waveformSize = this->nextWaveform->getNumSamples();
-  currentWaveform.setSize(nextWaveform->getNumChannels(),waveformSize);
+  currentWaveform->setSize(nextWaveform->getNumChannels(),waveformSize);
 
   // Initialize to a sin wave of amplitude 1
-  currentWaveform.clear();
+  currentWaveform->clear();
   {
-    float* writePtr = currentWaveform.getWritePointer(0);
-    float* channel2 = currentWaveform.getWritePointer(1);
+    float* writePtr = currentWaveform->getWritePointer(0);
+    float* channel2 = currentWaveform->getWritePointer(1);
     for (int i = 0; i < waveformSize; ++i) {
         float value = std::sin(juce::MathConstants<float>::twoPi * i / (float)waveformSize);
       writePtr[i] = value;
@@ -113,14 +116,17 @@ void SynthVoice::renderNextBlock (juce::AudioBuffer< float > &outputBuffer, int 
 
   if (readyToSwap->load(std::memory_order_acquire))
   {
-      currentWaveform.makeCopyOf(*nextWaveform);
+      currentWaveform->makeCopyOf(*nextWaveform);
       readyToSwap->store(false, std::memory_order_release);
   }
+
+  juce::AudioBuffer<float> waveform;
+  waveform.makeCopyOf(*currentWaveform);
 
   juce::dsp::AudioBlock<float> audioBlock { outputBuffer };
 
   // Make sure the current waveform is valid
-  if (currentWaveform.getNumSamples() == 0)
+  if (waveform.getNumSamples() == 0)
     return;
 
 //  // Get the read only pointer to the waveform
@@ -147,14 +153,14 @@ void SynthVoice::renderNextBlock (juce::AudioBuffer< float > &outputBuffer, int 
 //      phase -= tableSizeF;
 //  }
     
-    auto tableSizeOverSampleRate = (float) currentWaveform.getNumSamples() / sampleRate;
+    auto tableSizeOverSampleRate = (float) waveform.getNumSamples() / sampleRate;
     auto tableDelta = freq * tableSizeOverSampleRate;
 
 
-    auto tableSize = (unsigned int) currentWaveform.getNumSamples();
+    auto tableSize = (unsigned int) waveform.getNumSamples();
     for (auto sample = 0; sample < numSamples; ++sample) {
-      for (int channel = 0; channel < currentWaveform.getNumChannels(); channel++) {
-        auto* table = currentWaveform.getReadPointer (channel);
+      for (int channel = 0; channel < waveform.getNumChannels(); channel++) {
+        auto* table = waveform.getReadPointer (channel);
         auto index0 = (unsigned int) phase;
         auto index1 = index0 == (tableSize - 1) ? (unsigned int) 0 : index0 + 1;
         auto frac = phase - (float) index0;

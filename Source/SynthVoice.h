@@ -27,10 +27,12 @@ public:
   juce::ADSR adsr;
   juce::ADSR::Parameters adsrParams;
 
+
+
 private:
   const float ALPHA = 0.4;
   juce::AudioBuffer<float> renderBuffer;
-  juce::AudioBuffer<float> currentWaveform;
+  static std::shared_ptr<juce::AudioBuffer<float>> currentWaveform;
   std::shared_ptr<juce::AudioBuffer<float>> nextWaveform;
   std::atomic<bool>*readyToSwap = nullptr;
   double tailOff = 0.0;

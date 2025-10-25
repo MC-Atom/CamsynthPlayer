@@ -56,10 +56,10 @@
  #define JucePlugin_ManufacturerEmail      "devyn@devynoh.dev"
 #endif
 #ifndef  JucePlugin_ManufacturerCode
- #define JucePlugin_ManufacturerCode       0x4d616e75
+ #define JucePlugin_ManufacturerCode       0x41545353
 #endif
 #ifndef  JucePlugin_PluginCode
- #define JucePlugin_PluginCode             0x5a683276
+ #define JucePlugin_PluginCode             0x4174306d
 #endif
 #ifndef  JucePlugin_IsSynth
  #define JucePlugin_IsSynth                1
